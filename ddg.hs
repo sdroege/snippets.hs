@@ -3,6 +3,7 @@
 import System.Environment
 
 import qualified Network.HTTP.Client as HTTP
+import qualified Network.HTTP.Types.Header as HTTPH
 import qualified Network.HTTP.Client.TLS as HTTPS
 import qualified Network.URI as URI
 
@@ -96,7 +97,9 @@ query m s = do
     -- Catch all exceptions here and return nothing
     -- Better do nothing than crashing when we can't do the HTTP request
     handle (\(SomeException e) -> print ("Exception while handling Ddg request \"" ++ s ++ "\": " ++ show e) >> return Nothing) $ do
-        req <- HTTP.parseUrl url
+        baseReq <- HTTP.parseUrl url
+        let headers = (HTTPH.hConnection, "Keep-Alive") : HTTP.requestHeaders baseReq
+            req  = baseReq { HTTP.requestHeaders=headers }
         resp <- HTTP.httpLbs req m
         let d = decode (HTTP.responseBody resp) :: Maybe Results
         return d
