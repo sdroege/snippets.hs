@@ -7,6 +7,7 @@ import Data.List (intercalate, minimumBy, sortBy, foldl')
 import Data.List.Split (chunksOf)
 import Data.Function (on)
 import Data.Char (isSpace, isDigit)
+import Control.Applicative (liftA2)
 
 -- An example board, . or x are considered empty fields
 boardString :: String
@@ -49,7 +50,7 @@ newtype Solution = Solution [Decided]
 parseBoard :: String -> Maybe Board
 parseBoard s = if valid then Just board else Nothing
     where
-        valid = length cleanedString == 81 && all (\a -> isDigit a || a `elem` ".x") cleanedString && validate decided
+        valid = length cleanedString == 81 && all (liftA2 (||) isDigit  (`elem` ".x")) cleanedString && validate decided
 
         -- Start with an initial board that has no decided
         -- field yet and every field still has all possibilities,
