@@ -1,6 +1,8 @@
 import Data.Monoid
 import Data.Bifunctor
 
+import Criterion.Main
+
 -- Standard list based implementation
 unfoldr :: (b -> Maybe (a, b)) -> b -> [a]
 unfoldr f = go
@@ -75,3 +77,22 @@ unfoldlWith' f c0 g b0 = appEndo (unfoldlM f' b0) c0
     where
         f' = fmap (first (Endo . flip f)) . g
 
+main :: IO ()
+main = defaultMain benchmarks
+
+benchmarks :: [Benchmark]
+benchmarks = [  bgroup "unfoldr" [ bench "unfoldr" $ whnf (sum . unfoldr (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 , bench "unfoldrWith" $ whnf (unfoldrWith (+) 0 (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 , bench "unfoldr'" $ whnf (sum . unfoldr' (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 , bench "unfoldrM" $ whnf (getSum . unfoldrM (\b -> if b == 0 then Nothing else Just (Sum (b `mod` 10), b `div` 10))) (1234^1234)
+                                 , bench "unfoldrWith'" $ whnf (unfoldrWith' (+) 0 (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 , bench "unfoldr''" $ whnf (sum . unfoldr'' (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 ]
+             ,  bgroup "unfoldl" [ bench "unfoldl" $ whnf (sum . unfoldl (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 , bench "unfoldlWith" $ whnf (unfoldlWith (+) 0 (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 , bench "unfoldl'" $ whnf (sum . unfoldl' (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 , bench "unfoldlM" $ whnf (getSum . unfoldlM (\b -> if b == 0 then Nothing else Just (Sum (b `mod` 10), b `div` 10))) (1234^1234)
+                                 , bench "unfoldlWith'" $ whnf (unfoldlWith' (+) 0 (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 , bench "unfoldl''" $ whnf (sum . unfoldl'' (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
+                                 ]
+             ]
