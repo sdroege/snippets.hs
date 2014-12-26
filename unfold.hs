@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 import Data.Monoid
 import Data.Bifunctor
 
@@ -9,7 +10,7 @@ unfoldr f = go
     where
         go b = maybe [] step (f b)
             where
-                step (a, b') = a : go b'
+                step (!a, !b') = a : go b'
 
 -- Strict in accumulator/result
 unfoldl :: (b -> Maybe (a, b)) -> b -> [a]
@@ -17,7 +18,7 @@ unfoldl f = go []
     where
         go accum b = maybe accum step (f b)
             where
-                step (a, b') = let accum' = a : accum in
+                step (!a, !b') = let accum' = a : accum in
                                 accum' `seq` go accum' b'
 
 -- Implementation with fold function
@@ -26,7 +27,7 @@ unfoldrWith f c0 g = go
     where
         go b = maybe c0 step (g b)
             where
-                step (a, b') = a `f` go b'
+                step (!a, !b') = a `f` go b'
 
 
 unfoldr' :: (b -> Maybe (a, b)) -> b -> [a]
@@ -38,7 +39,7 @@ unfoldlWith f c0 g = go c0
     where
         go accum b = maybe accum step (g b)
             where
-                step (a, b') = let accum' = accum `f` a in
+                step (!a, !b') = let accum' = accum `f` a in
                                 accum' `seq` go accum' b'
 
 unfoldl' :: (b -> Maybe (a, b)) -> b -> [a]
@@ -50,7 +51,7 @@ unfoldrM f = go
     where
         go b = maybe mempty step (f b)
             where
-                step (m, b') = m <> go b'
+                step (!m, !b') = m <> go b'
 
 unfoldr'' :: (b -> Maybe (a, b)) -> b -> [a]
 unfoldr'' f = unfoldrM (fmap (first (: [])) . f)
@@ -66,7 +67,7 @@ unfoldlM f = go mempty
     where
         go accum b = maybe accum step (f b)
             where
-                step (m, b') = let accum' = m <> accum in
+                step (!m, !b') = let accum' = m <> accum in
                                 accum' `seq` go accum' b'
 
 unfoldl'' :: (b -> Maybe (a, b)) -> b -> [a]
