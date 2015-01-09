@@ -1,5 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 import Data.Monoid
+
+import Control.Applicative
+import Data.Functor.Identity
+
 import Data.Bifunctor
 
 import Criterion.Main
@@ -53,6 +57,13 @@ unfoldrM f = go
             where
                 step (!m, !b') = m <> go b'
 
+unfoldrMM :: (Functor m, Monad m, Monoid t) => (b -> m (Maybe (t, b))) -> b -> m t
+unfoldrMM f = go
+    where
+        go b = f b >>= maybe (return mempty) step
+            where
+                step (!t, !b') = (t <>) <$> go b'
+
 unfoldr'' :: (b -> Maybe (a, b)) -> b -> [a]
 unfoldr'' f = unfoldrM (fmap (first (: [])) . f)
 
@@ -66,6 +77,14 @@ unfoldlM :: Monoid m => (b -> Maybe (m, b)) -> b -> m
 unfoldlM f = go mempty
     where
         go accum b = maybe accum step (f b)
+            where
+                step (!m, !b') = let accum' = m <> accum in
+                                accum' `seq` go accum' b'
+
+unfoldlMM :: (Functor m, Monad m, Monoid t) => (b -> m (Maybe (t, b))) -> b -> m t
+unfoldlMM f = go mempty
+    where
+        go accum b = f b >>= maybe (return accum) step
             where
                 step (!m, !b') = let accum' = m <> accum in
                                 accum' `seq` go accum' b'
@@ -86,6 +105,7 @@ benchmarks = [  bgroup "unfoldr" [ bench "unfoldr" $ whnf (sum . unfoldr (\b -> 
                                  , bench "unfoldrWith" $ whnf (unfoldrWith (+) 0 (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
                                  , bench "unfoldr'" $ whnf (sum . unfoldr' (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
                                  , bench "unfoldrM" $ whnf (getSum . unfoldrM (\b -> if b == 0 then Nothing else Just (Sum (b `mod` 10), b `div` 10))) (1234^1234)
+                                 , bench "unfoldrMM" $ whnf (getSum . runIdentity . unfoldrMM (\b -> return $ if b == 0 then Nothing else Just (Sum (b `mod` 10), b `div` 10))) (1234^1234)
                                  , bench "unfoldrWith'" $ whnf (unfoldrWith' (+) 0 (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
                                  , bench "unfoldr''" $ whnf (sum . unfoldr'' (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
                                  ]
@@ -93,6 +113,7 @@ benchmarks = [  bgroup "unfoldr" [ bench "unfoldr" $ whnf (sum . unfoldr (\b -> 
                                  , bench "unfoldlWith" $ whnf (unfoldlWith (+) 0 (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
                                  , bench "unfoldl'" $ whnf (sum . unfoldl' (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
                                  , bench "unfoldlM" $ whnf (getSum . unfoldlM (\b -> if b == 0 then Nothing else Just (Sum (b `mod` 10), b `div` 10))) (1234^1234)
+                                 , bench "unfoldlMM" $ whnf (getSum . runIdentity . unfoldlMM (\b -> return $ if b == 0 then Nothing else Just (Sum (b `mod` 10), b `div` 10))) (1234^1234)
                                  , bench "unfoldlWith'" $ whnf (unfoldlWith' (+) 0 (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
                                  , bench "unfoldl''" $ whnf (sum . unfoldl'' (\b -> if b == 0 then Nothing else Just (b `mod` 10, b `div` 10))) (1234^1234)
                                  ]
